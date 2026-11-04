@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excluir Livro</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <h1 class="brand">📚 Gerenciamento de Acervo de Livros</h1>
+        <nav>
+            <a href="/">Acervo</a>
+            <a href="/cadastrar.html">Cadastrar Livro</a>
+            <a href="/atualizar.html">Editar Livro</a>
+            <a href="/excluir.html" class="active">Excluir Livro</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <h2>Localizar Livro para Exclusão</h2>
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <label for="idBusca">ID do Livro</label>
+                <input type="number" id="idBusca" min="1" placeholder="Digite o ID">
+            </div>
+            <div class="form-group" style="align-self: end;">
+                <button onclick="buscarLivro()">Localizar</button>
+            </div>
+        </div>
+        <div id="mensagemBusca" class="message"></div>
+    </section>
+
+    <section class="card" id="cardLivro" style="display:none;">
+        <h2>Confirmação de Exclusão</h2>
+        <p><strong>ID:</strong> <span id="lId"></span></p>
+        <p><strong>Título:</strong> <span id="lTitulo"></span></p>
+        <p><strong>Autor:</strong> <span id="lAutor"></span></p>
+        <p><strong>Gênero:</strong> <span id="lGenero"></span></p>
+        <p><strong>Status:</strong> <span id="lStatus"></span></p>
+
+        <button class="danger" onclick="excluirLivro()">Excluir Definitivamente</button>
+        <div id="mensagemExclusao" class="message"></div>
+    </section>
+</main>
+
+<script>
+    let livroAtual = null;
+
+    function mensagem(idElemento, tipo, texto) {
+        const el = document.getElementById(idElemento);
+        el.className = `message show ${tipo}`;
+        el.innerHTML = texto;
+    }
+
+    async function buscarLivro() {
+        const id = document.getElementById('idBusca').value;
+        document.getElementById('cardLivro').style.display = 'none';
+
+        if (!id) return mensagem('mensagemBusca', 'warning', 'Informe o ID do livro.');
+
+        const resposta = await fetch(`/api/livros/${id}`);
+        const dados = await resposta.json();
+
+        if (!resposta.ok) {
+            livroAtual = null;
+            return mensagem('mensagemBusca', 'danger', dados.error || 'Livro não encontrado.');
+        }
+
+        livroAtual = dados;
+        document.getElementById('lId').textContent = dados.id;
+        document.getElementById('lTitulo').textContent = dados.titulo;
+        document.getElementById('lAutor').textContent = dados.autor;
+        document.getElementById('lGenero').textContent = dados.genero;
+        document.getElementById('lStatus').textContent = dados.status;
+        document.getElementById('cardLivro').style.display = 'block';
+
+        mensagem('mensagemBusca', 'info', 'Confirme os dados antes de excluir.');
+    }
+
+    async function excluirLivro() {
+        if (!livroAtual) return;
+
+        if (!confirm(`Tem certeza que deseja excluir o livro "${livroAtual.titulo}" (ID ${livroAtual.id})?`)) return;
+
+        const resposta = await fetch(`/api/livros/${livroAtual.id}`, { method: 'DELETE' });
+        const dados = await resposta.json();
+
+        if (resposta.ok) {
+            mensagem('mensagemExclusao', 'success', 'Livro excluído com sucesso.');
+            livroAtual = null;
+            setTimeout(() => {
+                document.getElementById('cardLivro').style.display = 'none';
+                document.getElementById('idBusca').value = '';
+            }, 1200);
+        } else {
+            mensagem('mensagemExclusao', 'danger', dados.error || 'Erro ao excluir.');
+        }
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('id')) {
+        document.getElementById('idBusca').value = urlParams.get('id');
+        buscarLivro();
+    }
+</script>
+</body>
+</html>

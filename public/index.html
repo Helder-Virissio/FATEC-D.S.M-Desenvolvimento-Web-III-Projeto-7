@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acervo de Livros</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <h1 class="brand">Gerenciamento de Acervo de Livros</h1>
+        <nav>
+            <a href="/" class="active">Acervo</a>
+            <a href="/cadastrar.html">Cadastrar Livro</a>
+            <a href="/atualizar.html">Editar Livro</a>
+            <a href="/excluir.html">Excluir Livro</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <h2>Pesquisar Acervo Local</h2>
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <label for="busca">Título, Autor ou ISBN</label>
+                <input id="busca" type="text" placeholder="Digite para pesquisar no banco...">
+            </div>
+            <div class="form-group" style="align-self: end;">
+                <button onclick="carregarLivros()">Pesquisar</button>
+                <button class="warning" onclick="limparFiltros()">Limpar</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>Livros Cadastrados</h2>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Capa</th>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Autor</th>
+                        <th>ISBN</th>
+                        <th>Ano</th>
+                        <th>Gênero</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo"></tbody>
+            </table>
+        </div>
+        <p id="quantidade" style="color: var(--muted); margin-top: 10px;"></p>
+    </section>
+</main>
+
+<script>
+    function renderStatus(status) {
+        if (status === 'QUERO_LER') return '<span class="badge quero-ler">Quero Ler</span>';
+        if (status === 'LENDO') return '<span class="badge lendo">Lendo</span>';
+        if (status === 'CONCLUIDO') return '<span class="badge concluido">Concluído</span>';
+        return status;
+    }
+
+    async function carregarLivros() {
+        const busca = document.getElementById('busca').value.trim();
+        const url = busca ? `/api/livros?q=${encodeURIComponent(busca)}` : '/api/livros';
+
+        const resposta = await fetch(url);
+        const livros = await resposta.json();
+        const tbody = document.getElementById('tabelaCorpo');
+
+        tbody.innerHTML = '';
+
+        if (!Array.isArray(livros) || livros.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Nenhum livro cadastrado.</td></tr>';
+            document.getElementById('quantidade').textContent = '0 registro(s).';
+            return;
+        }
+
+        livros.forEach(l => {
+            const capa = l.capa_url 
+                ? `<img src="${l.capa_url}" class="capa-img" alt="Capa">`
+                : `<span style="font-size:24px;">📖</span>`;
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="text-align:center;">${capa}</td>
+                    <td>${l.id}</td>
+                    <td><strong>${l.titulo}</strong></td>
+                    <td>${l.autor}</td>
+                    <td>${l.isbn || '-'}</td>
+                    <td>${l.ano_publicacao}</td>
+                    <td>${l.genero}</td>
+                    <td>${renderStatus(l.status)}</td>
+                    <td>
+                        <a href="/atualizar.html?id=${l.id}"><button class="warning" style="padding:5px 9px; font-size:12px;">Editar</button></a>
+                        <a href="/excluir.html?id=${l.id}"><button class="danger" style="padding:5px 9px; font-size:12px;">Excluir</button></a>
+                    </td>
+                </tr>
+            `;
+        });
+
+        document.getElementById('quantidade').textContent = `${livros.length} livro(s) encontrado(s).`;
+    }
+
+    function limparFiltros() {
+        document.getElementById('busca').value = '';
+        carregarLivros();
+    }
+
+    document.getElementById('busca').addEventListener('keydown', e => {
+        if (e.key === 'Enter') carregarLivros();
+    });
+
+    carregarLivros();
+</script>
+</body>
+</html>

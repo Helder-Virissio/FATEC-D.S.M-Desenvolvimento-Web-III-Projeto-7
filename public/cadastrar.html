@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Livro</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <h1 class="brand">📚 Gerenciamento de Acervo de Livros</h1>
+        <nav>
+            <a href="/">Acervo</a>
+            <a href="/cadastrar.html" class="active">Cadastrar Livro</a>
+            <a href="/atualizar.html">Editar Livro</a>
+            <a href="/excluir.html">Excluir Livro</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="card open-library-box">
+        <h2>🔍 Buscar Dados na Open Library</h2>
+        <p style="color: var(--muted); font-size: 14px;">Digite o título para preencher automaticamente autor, ano e capa antes de salvar.</p>
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <input type="text" id="buscaOpenLibrary" placeholder="Ex: O Senhor dos Anéis, Dom Casmurro...">
+            </div>
+            <div class="form-group">
+                <button type="button" onclick="consultarOpenLibrary()">Consultar API</button>
+            </div>
+        </div>
+        <div id="mensagemAPI" class="message"></div>
+    </section>
+
+    <section class="card">
+        <h2>Formulário de Cadastro</h2>
+        <form id="formCadastro">
+            <div class="form-grid">
+                <div class="form-group span-2">
+                    <label for="titulo">Título *</label>
+                    <input type="text" id="titulo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="autor">Autor *</label>
+                    <input type="text" id="autor" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="isbn">ISBN (Opcional)</label>
+                    <input type="text" id="isbn" placeholder="Somente números">
+                </div>
+
+                <div class="form-group">
+                    <label for="ano_publicacao">Ano de Publicação *</label>
+                    <input type="number" id="ano_publicacao" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="genero">Gênero Literário *</label>
+                    <input type="text" id="genero" placeholder="Ex: Ficção, Romance, Romance Policial" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status de Leitura *</label>
+                    <select id="status" required>
+                        <option value="QUERO_LER">Quero Ler</option>
+                        <option value="LENDO">Lendo</option>
+                        <option value="CONCLUIDO">Concluído</option>
+                    </select>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="capa_url">URL da Capa (Opcional)</label>
+                    <input type="url" id="capa_url" placeholder="https://covers.openlibrary.org/b/id/...">
+                </div>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="success">Cadastrar Livro</button>
+                <button type="reset" class="warning">Limpar Formulário</button>
+            </div>
+        </form>
+
+        <div id="mensagem" class="message"></div>
+    </section>
+</main>
+
+<script>
+    function mostrarMensagem(id, tipo, html) {
+        const el = document.getElementById(id);
+        el.className = `message show ${tipo}`;
+        el.innerHTML = html;
+    }
+
+    async function consultarOpenLibrary() {
+        const termo = document.getElementById('buscaOpenLibrary').value.trim();
+        if (!termo) {
+            return mostrarMensagem('mensagemAPI', 'warning', 'Informe um título para consultar.');
+        }
+
+        mostrarMensagem('mensagemAPI', 'info', 'Consultando a Open Library...');
+
+        try {
+            const res = await fetch(`https://openlibrary.org/search.json?title=${encodeURIComponent(termo)}`);
+            const dados = await res.json();
+
+            if (!dados.docs || dados.docs.length === 0) {
+                return mostrarMensagem('mensagemAPI', 'warning', 'Nenhum livro encontrado na Open Library. Você pode cadastrar manualmente.');
+            }
+
+            const primeiro = dados.docs[0];
+
+            document.getElementById('titulo').value = primeiro.title || termo;
+            document.getElementById('autor').value = primeiro.author_name ? primeiro.author_name.join(', ') : 'Desconhecido';
+            document.getElementById('ano_publicacao').value = primeiro.first_publish_year || new Date().getFullYear();
+            
+            if (primeiro.isbn && primeiro.isbn.length > 0) {
+                document.getElementById('isbn').value = primeiro.isbn[0];
+            }
+
+            if (primeiro.cover_i) {
+                document.getElementById('capa_url').value = `https://covers.openlibrary.org/b/id/${primeiro.cover_i}-L.jpg`;
+            }
+
+            mostrarMensagem('mensagemAPI', 'success', `Campos preenchidos com o resultado: <strong>${primeiro.title}</strong>.`);
+        } catch (err) {
+            mostrarMensagem('mensagemAPI', 'danger', 'Falha ao comunicar com a Open Library. O cadastro manual está disponível.');
+        }
+    }
+
+    document.getElementById('formCadastro').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const payload = {
+            titulo: document.getElementById('titulo').value,
+            autor: document.getElementById('autor').value,
+            isbn: document.getElementById('isbn').value,
+            ano_publicacao: document.getElementById('ano_publicacao').value,
+            genero: document.getElementById('genero').value,
+            status: document.getElementById('status').value,
+            capa_url: document.getElementById('capa_url').value
+        };
+
+        const resposta = await fetch('/api/livros', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const dados = await resposta.json();
+
+        if (resposta.ok) {
+            mostrarMensagem('mensagem', 'success', `Livro cadastrado com sucesso! ID Gerado: <strong>${dados.id}</strong>`);
+            document.getElementById('formCadastro').reset();
+        } else {
+            mostrarMensagem('mensagem', 'danger', dados.error || 'Erro ao cadastrar.');
+        }
+    });
+</script>
+</body>
+</html>

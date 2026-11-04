@@ -1,0 +1,16 @@
+{
+  "name": "sistema-gerenciamento-livros",
+  "version": "1.0.0",
+  "description": "Projeto 07 - Sistema de Gerenciamento de Livros com Open Library API e SQLite",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node app.js"
+  },
+   "keywords": [],
+  "author": "Helder Virissio Araujo",
+  "license": "MIT",
+  "dependencies": {
+    "sqlite3": "^6.0.1"
+  }
+}

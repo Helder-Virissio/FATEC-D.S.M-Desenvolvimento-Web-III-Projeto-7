@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Livro</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <h1 class="brand">📚 Gerenciamento de Acervo de Livros</h1>
+        <nav>
+            <a href="/">Acervo</a>
+            <a href="/cadastrar.html">Cadastrar Livro</a>
+            <a href="/atualizar.html" class="active">Editar Livro</a>
+            <a href="/excluir.html">Excluir Livro</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+    <section class="card">
+        <h2>Localizar Livro</h2>
+        <div class="form-grid">
+            <div class="form-group span-2">
+                <label for="idBusca">ID do Livro</label>
+                <input type="number" id="idBusca" min="1" placeholder="Digite o ID">
+            </div>
+            <div class="form-group" style="align-self: end;">
+                <button onclick="buscarLivro()">Buscar</button>
+            </div>
+        </div>
+        <div id="mensagemBusca" class="message"></div>
+    </section>
+
+    <section class="card" id="cardFormulario" style="display:none;">
+        <h2>Editar Informações</h2>
+        <form id="formAtualizacao">
+            <div class="form-grid">
+                <div class="form-group span-2">
+                    <label for="titulo">Título *</label>
+                    <input type="text" id="titulo" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="autor">Autor *</label>
+                    <input type="text" id="autor" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="isbn">ISBN</label>
+                    <input type="text" id="isbn">
+                </div>
+
+                <div class="form-group">
+                    <label for="ano_publicacao">Ano de Publicação *</label>
+                    <input type="number" id="ano_publicacao" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="genero">Gênero Literário *</label>
+                    <input type="text" id="genero" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status de Leitura *</label>
+                    <select id="status" required>
+                        <option value="QUERO_LER">Quero Ler</option>
+                        <option value="LENDO">Lendo</option>
+                        <option value="CONCLUIDO">Concluído</option>
+                    </select>
+                </div>
+
+                <div class="form-group span-2">
+                    <label for="capa_url">URL da Capa</label>
+                    <input type="url" id="capa_url">
+                </div>
+            </div>
+
+            <button type="submit" class="warning">Salvar Alterações</button>
+        </form>
+        <div id="mensagemAtualizacao" class="message"></div>
+    </section>
+</main>
+
+<script>
+    let idAtual = null;
+
+    function mensagem(idElemento, tipo, texto) {
+        const el = document.getElementById(idElemento);
+        el.className = `message show ${tipo}`;
+        el.innerHTML = texto;
+    }
+
+    async function buscarLivro() {
+        const id = document.getElementById('idBusca').value;
+        document.getElementById('cardFormulario').style.display = 'none';
+
+        if (!id) return mensagem('mensagemBusca', 'warning', 'Informe o ID do livro.');
+
+        const resposta = await fetch(`/api/livros/${id}`);
+        const dados = await resposta.json();
+
+        if (!resposta.ok) {
+            return mensagem('mensagemBusca', 'danger', dados.error || 'Livro não encontrado.');
+        }
+
+        idAtual = dados.id;
+        document.getElementById('titulo').value = dados.titulo;
+        document.getElementById('autor').value = dados.autor;
+        document.getElementById('isbn').value = dados.isbn || '';
+        document.getElementById('ano_publicacao').value = dados.ano_publicacao;
+        document.getElementById('genero').value = dados.genero;
+        document.getElementById('status').value = dados.status;
+        document.getElementById('capa_url').value = dados.capa_url || '';
+
+        document.getElementById('cardFormulario').style.display = 'block';
+        mensagem('mensagemBusca', 'info', `Livro localizado: <strong>${dados.titulo}</strong>`);
+    }
+
+    document.getElementById('formAtualizacao').addEventListener('submit', async e => {
+        e.preventDefault();
+
+        const payload = {
+            titulo: document.getElementById('titulo').value,
+            autor: document.getElementById('autor').value,
+            isbn: document.getElementById('isbn').value,
+            ano_publicacao: document.getElementById('ano_publicacao').value,
+            genero: document.getElementById('genero').value,
+            status: document.getElementById('status').value,
+            capa_url: document.getElementById('capa_url').value
+        };
+
+        const resposta = await fetch(`/api/livros/${idAtual}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const dados = await resposta.json();
+
+        if (resposta.ok) {
+            mensagem('mensagemAtualizacao', 'success', 'Livro atualizado com sucesso!');
+        } else {
+            mensagem('mensagemAtualizacao', 'danger', dados.error || 'Erro ao atualizar.');
+        }
+    });
+
+    // Se vier com ?id= na URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('id')) {
+        document.getElementById('idBusca').value = urlParams.get('id');
+        buscarLivro();
+    }
+</script>
+</body>
+</html>
